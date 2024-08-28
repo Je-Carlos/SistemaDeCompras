@@ -26,22 +26,22 @@ function Sidebar() {
           <h2 className="text-xl font-semibold mb-4">Menu</h2>
           <ul>
             <li className="mb-2">
-              <Link to="/cadastro-fornecedores" className="text-white">
+              <Link to="/user" className="text-white">
                 Usuários
               </Link>
             </li>
             <li className="mb-2">
-              <Link to="/cadastro-produtos" className="text-white">
+              <Link to="/cotacao" className="text-white">
                 Fazer Cotação
               </Link>
             </li>
             <li className="mb-2">
-              <Link to="/cadastro-contatos" className="text-white">
+              <Link to="/fornecedor" className="text-white">
                 Fornecedores
               </Link>
             </li>
             <li className="mb-2">
-              <Link to="/cadastro-cotacao" className="text-white">
+              <Link to="/cotacao" className="text-white">
                 Cotações
               </Link>
             </li>

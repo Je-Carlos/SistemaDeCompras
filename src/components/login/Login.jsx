@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase/firebaseConfig"; // Certifique-se de ajustar o caminho conforme necessário
+import { auth } from "../../firebase/firebaseConfig"; // Certifique-se de ajustar o caminho conforme necessário
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 const Login = () => {
