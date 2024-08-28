@@ -5,6 +5,7 @@ import CadastroProdutos from "./components/CadastroProdutos";
 import CadastroCotacao from "./components/CadastroCotacao";
 import Sidebar from "./components/SideBar";
 import Login from "./components/Login";
+import Home from "./components/Home";
 
 export default function App() {
   return (
@@ -25,6 +26,8 @@ export default function App() {
               <Route path="/cadastro-contatos" element={<CadastroContatos />} />
               <Route path="/cadastro-cotacao" element={<CadastroCotacao />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="*" element={<Home />} />
             </Routes>
           </div>
         </div>
