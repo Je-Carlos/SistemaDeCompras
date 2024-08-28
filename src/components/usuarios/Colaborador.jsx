@@ -1,110 +1,126 @@
-import { useState } from "react";
-
-function CadastroFornecedores() {
-  const [fornecedor, setFornecedor] = useState({
+import { useState, useEffect } from "react";
+import { db } from "../../firebase/firebaseConfig";
+import { collection, getDocs, addDoc } from "firebase/firestore";
+// TODO: CADASTRO DE USUÁRIO QUEBRADO
+function CadastroUsuario() {
+  const [usuario, setUsuario] = useState({
     nome: "",
-    cnpj: "",
-    endereco: "",
-    telefone: "",
+    email: "",
+    senha: "",
+    tipo: "colaborador", // padrão para colaborador
   });
   const [erro, setErro] = useState("");
+  const [usuarios, setUsuarios] = useState([]); // Inicialize como um array vazio
+
+  useEffect(() => {
+    // Fetch users from Firebase
+    const fetchUsuarios = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "usuarios"));
+        const usuariosList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setUsuarios(usuariosList);
+      } catch (error) {
+        console.error("There was an error fetching the users!", error);
+      }
+    };
+
+    fetchUsuarios();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFornecedor((prevState) => ({
+    setUsuario((prevState) => ({
       ...prevState,
       [name]: value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const { nome, cnpj, endereco, telefone } = fornecedor;
-    if (!nome || !cnpj || !endereco || !telefone) {
-      setErro("Todos os campos são obrigatórios");
-      return;
+    try {
+      const docRef = await addDoc(collection(db, "usuarios"), usuario);
+      setUsuarios([...usuarios, { id: docRef.id, ...usuario }]);
+      setUsuario({
+        nome: "",
+        email: "",
+        senha: "",
+        tipo: "colaborador",
+      });
+    } catch (error) {
+      setErro("Erro ao cadastrar usuário");
+      console.error("There was an error creating the user!", error);
     }
-    // lógica para enviar os dados para o servidor
-    console.log({ nome, cnpj, endereco, telefone });
-    alert("Fornecedor cadastrado com sucesso!");
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto bg-gray-800 text-white shadow-md rounded-lg">
-      <h2 className="text-lg font-bold mb-4 text-white">
-        Cadastro de Fornecedores
-      </h2>
-      {erro && <div className="text-red-500 mb-2">{erro}</div>}
+    <div className="container mx-auto p-4 bg-gray-800 rounded-lg">
+      <h1 className="text-2xl mb-4">Cadastro de Usuário</h1>
       <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label
-            htmlFor="nome"
-            className="block text-sm font-medium text-gray-300"
-          >
-            Nome
-          </label>
+        <div className="mb-2">
+          <label className="block text-white">Nome:</label>
           <input
+            type="text"
             name="nome"
-            type="text"
-            value={fornecedor.nome}
+            value={usuario.nome}
             onChange={handleChange}
-            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+            className="w-full p-2 rounded"
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="cnpj"
-            className="block text-sm font-medium text-gray-300"
-          >
-            CNPJ
-          </label>
+        <div className="mb-2">
+          <label className="block text-white">Email:</label>
           <input
-            name="cnpj"
-            type="text"
-            value={fornecedor.cnpj}
+            type="email"
+            name="email"
+            value={usuario.email}
             onChange={handleChange}
-            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+            className="w-full p-2 rounded"
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="endereco"
-            className="block text-sm font-medium text-gray-300"
-          >
-            Endereço
-          </label>
+        <div className="mb-2">
+          <label className="block text-white">Senha:</label>
           <input
-            name="endereco"
-            type="text"
-            value={fornecedor.endereco}
+            type="password"
+            name="senha"
+            value={usuario.senha}
             onChange={handleChange}
-            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+            className="w-full p-2 rounded"
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="telefone"
-            className="block text-sm font-medium text-gray-300"
+        <div className="mb-2">
+          <label className="block text-white">Tipo:</label>
+          <select
+            name="tipo"
+            value={usuario.tipo}
+            onChange={handleChange}
+            className="w-full p-2 rounded"
           >
-            Telefone
-          </label>
-          <input
-            name="telefone"
-            type="text"
-            value={fornecedor.telefone}
-            onChange={handleChange}
-            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-          />
+            <option value="colaborador">Colaborador</option>
+            <option value="administrador">Administrador</option>
+          </select>
         </div>
-        <button
-          type="submit"
-          className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-        >
+        {erro && <p className="text-red-500">{erro}</p>}
+        <button type="submit" className="bg-blue-500 text-white p-2 rounded">
           Cadastrar
         </button>
       </form>
+      <h2 className="text-xl mt-4 mb-2">Usuários Cadastrados</h2>
+      <select className="w-full p-2 rounded">
+        {Array.isArray(usuarios) &&
+          usuarios.map(
+            (
+              usuario // Verifique se usuarios é um array
+            ) => (
+              <option key={usuario.id} value={usuario.id}>
+                {usuario.nome} - {usuario.email}
+              </option>
+            )
+          )}
+      </select>
     </div>
   );
 }
 
-export default CadastroFornecedores;
+export default CadastroUsuario;
