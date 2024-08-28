@@ -11,59 +11,46 @@ export default function CadastroProdutos() {
     console.log({ nome, descricao, preco });
     alert("Produto cadastrado com sucesso!");
   };
+
   return (
-    <div className="p-4 max-w-md mx-auto bg-white shadow-md rounded-lg">
-      <h2 className="text-lg font-bold mb-4">Cadastro de Produtos</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label
-            htmlFor="nome"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Nome do Produto
-          </label>
+    <div className="p-4 max-w-md mx-auto bg-gray-800 text-white shadow-md rounded-lg">
+      <h1 className="text-2xl font-semibold mb-4 text-center text-white">
+        Cadastro de Produtos
+      </h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
           <input
+            name="nome"
             type="text"
-            id="nome"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            required
+            placeholder="Nome"
+            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="descricao"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Descrição
-          </label>
-          <textarea
-            id="descricao"
+        <div>
+          <input
+            name="descricao"
+            type="text"
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Descrição"
+            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="preco"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Preço
-          </label>
+        <div>
           <input
+            name="preco"
             type="number"
-            id="preco"
             value={preco}
             onChange={(e) => setPreco(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            required
+            placeholder="Preço"
+            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
           />
         </div>
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-secondary-500"
+          className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
         >
           Cadastrar
         </button>
