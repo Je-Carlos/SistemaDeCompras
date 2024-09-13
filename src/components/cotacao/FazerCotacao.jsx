@@ -1,69 +1,111 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { db } from "../../firebase/firebaseConfig";
+import {
+  collection,
+  getDocs,
+  updateDoc,
+  doc,
+  arrayUnion,
+} from "firebase/firestore";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 
-function CadastroCotacao() {
-  const [cotacao, setCotacao] = useState({
-    produto: "",
-    fornecedor: "",
-    quantidade: "",
-    preco: "",
-  });
+export default function FazerCotacao() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const [cotacoes, setCotacoes] = useState([]);
+  const [carregando, setCarregando] = useState(false);
   const [selectedCotacao, setSelectedCotacao] = useState(null);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [isCotacoesVisible, setIsCotacoesVisible] = useState({});
+  const [isCotacoesFeitasVisible, setIsCotacoesFeitasVisible] = useState(true);
 
   useEffect(() => {
-    // Simulação de busca de cotações do servidor
-    const fetchCotacoes = async () => {
-      const data = [
-        {
-          id: 1,
-          produto: "Produto A",
-          fornecedor: "Fornecedor X",
-          quantidade: 10,
-          preco: 100,
-        },
-        {
-          id: 2,
-          produto: "Produto B",
-          fornecedor: "Fornecedor Y",
-          quantidade: 20,
-          preco: 200,
-        },
-      ];
-      setCotacoes(data);
+    const fetchAllCotacoes = async () => {
+      setCarregando(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "cotacoes"));
+        const cotacoesList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCotacoes(cotacoesList);
+      } catch (error) {
+        console.error("Erro ao buscar as cotações:", error);
+      } finally {
+        setCarregando(false);
+      }
     };
-    fetchCotacoes();
+
+    fetchAllCotacoes();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setCotacao((prevState) => ({
+  const onSubmit = async (data) => {
+    if (!data.produto || !data.categoria) {
+      setErro("Todos os campos são obrigatórios");
+      return;
+    }
+
+    const produtoCotacoes = selectedCotacao?.cotações || [];
+    if (produtoCotacoes.length >= 3) {
+      setErro("Limite de 3 cotações atingido para este produto");
+      return;
+    }
+
+    const novaCotacao = {
+      valor: data.valor,
+      data: data.data,
+      fornecedor: data.fornecedor,
+    };
+
+    try {
+      const cotacaoRef = doc(db, "cotacoes", selectedCotacao.id);
+      await updateDoc(cotacaoRef, {
+        cotações: arrayUnion(novaCotacao),
+        status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "aberta",
+      });
+
+      setSucesso("Cotação registrada com sucesso!");
+      setErro("");
+
+      // Atualizar a lista de cotações
+      setCotacoes((prevCotacoes) =>
+        prevCotacoes.map((c) =>
+          c.id === selectedCotacao.id
+            ? {
+                ...c,
+                cotações: [...produtoCotacoes, novaCotacao],
+                status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "aberta",
+              }
+            : c
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao registrar a cotação:", error);
+      setErro("Erro ao registrar a cotação: " + error.message);
+    }
+  };
+
+  const toggleCotacoesVisibility = (id) => {
+    setIsCotacoesVisible((prevState) => ({
       ...prevState,
-      [name]: value,
+      [id]: !prevState[id],
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const { produto, fornecedor, quantidade, preco } = cotacao;
-    if (!produto || !fornecedor || !quantidade || !preco) {
-      alert("Todos os campos são obrigatórios");
-      return;
-    }
-    // Aqui você pode adicionar a lógica para enviar os dados para o servidor
-    console.log({ produto, fornecedor, quantidade, preco });
-    alert("Cotação cadastrada com sucesso!");
-  };
-
-  const handleSelectChange = (e) => {
-    const selectedId = e.target.value;
-    const selected = cotacoes.find((c) => c.id === parseInt(selectedId));
-    setSelectedCotacao(selected);
+  const toggleCotacoesFeitasVisibility = () => {
+    setIsCotacoesFeitasVisible(!isCotacoesFeitasVisible);
   };
 
   return (
     <div className="p-4 max-w-md mx-auto bg-gray-800 text-white shadow-md rounded-lg">
-      <h2 className="text-lg font-bold mb-4 text-white">Cadastro de Cotação</h2>
-      <form onSubmit={handleSubmit}>
+      <h2 className="text-lg font-bold mb-4 text-white">Fazer Cotação</h2>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mb-4">
           <label
             htmlFor="produto"
@@ -74,109 +116,112 @@ function CadastroCotacao() {
           <input
             name="produto"
             type="text"
-            value={cotacao.produto}
-            onChange={handleChange}
+            {...register("produto", { required: "Produto é obrigatório" })}
             className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
           />
+          {errors.produto && (
+            <p className="text-red-500">{errors.produto.message}</p>
+          )}
         </div>
         <div className="mb-4">
           <label
-            htmlFor="fornecedor"
+            htmlFor="categoria"
             className="block text-sm font-medium text-gray-300"
           >
-            Fornecedor
+            Categoria
           </label>
           <input
-            name="fornecedor"
+            name="categoria"
             type="text"
-            value={cotacao.fornecedor}
-            onChange={handleChange}
+            {...register("categoria", { required: "Categoria é obrigatória" })}
             className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
           />
-        </div>
-        <div className="mb-4">
-          <label
-            htmlFor="quantidade"
-            className="block text-sm font-medium text-gray-300"
-          >
-            Quantidade
-          </label>
-          <input
-            name="quantidade"
-            type="number"
-            value={cotacao.quantidade}
-            onChange={handleChange}
-            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-          />
-        </div>
-        <div className="mb-4">
-          <label
-            htmlFor="preco"
-            className="block text-sm font-medium text-gray-300"
-          >
-            Preço
-          </label>
-          <input
-            name="preco"
-            type="number"
-            value={cotacao.preco}
-            onChange={handleChange}
-            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-          />
+          {errors.categoria && (
+            <p className="text-red-500">{errors.categoria.message}</p>
+          )}
         </div>
         <button
           type="submit"
           className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
         >
-          Cadastrar
+          Fazer Cotação
         </button>
       </form>
-
-      <h2 className="text-lg font-bold mt-8 mb-4 text-white">
-        Consultar Cotações
-      </h2>
-      <div className="mb-4">
-        <label
-          htmlFor="cotacoes"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Selecionar Cotação
-        </label>
-        <select
-          id="cotacoes"
-          onChange={handleSelectChange}
-          className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-        >
-          <option value="">Selecione uma cotação</option>
-          {cotacoes.map((cotacao) => (
-            <option key={cotacao.id} value={cotacao.id}>
-              {cotacao.produto} - {cotacao.fornecedor}
-            </option>
-          ))}
-        </select>
+      {erro && <p className="text-red-500 mt-4">{erro}</p>}
+      {sucesso && <p className="text-green-500 mt-4">{sucesso}</p>}
+      <div className="flex items-center justify-between mt-6 mb-4">
+        <h2 className="text-lg font-bold text-white">Cotações Feitas</h2>
+        <button onClick={toggleCotacoesFeitasVisibility} className="text-white">
+          <FontAwesomeIcon
+            icon={isCotacoesFeitasVisible ? faChevronUp : faChevronDown}
+          />
+        </button>
       </div>
-
-      {selectedCotacao && (
-        <div className="bg-gray-700 p-4 rounded-lg">
-          <h3 className="text-lg font-bold mb-2 text-white">
-            Detalhes da Cotação
-          </h3>
-          <p className="text-sm text-gray-300">
-            Produto: {selectedCotacao.produto}
-          </p>
-          <p className="text-sm text-gray-300">
-            Fornecedor: {selectedCotacao.fornecedor}
-          </p>
-          <p className="text-sm text-gray-300">
-            Quantidade: {selectedCotacao.quantidade}
-          </p>
-          <p className="text-sm text-gray-300">
-            Preço: {selectedCotacao.preco}
-          </p>
-        </div>
+      {isCotacoesFeitasVisible && (
+        <ul className="mt-2">
+          {carregando ? (
+            <p>Carregando...</p>
+          ) : (
+            cotacoes.map((cotacao, index) => (
+              <li key={index} className="bg-gray-700 p-2 mb-2 rounded">
+                <p>
+                  <strong>Produto:</strong> {cotacao.produto}
+                </p>
+                <p>
+                  <strong>Categoria:</strong> {cotacao.categoria}
+                </p>
+                <p>
+                  <strong>Data:</strong> {cotacao.data}
+                </p>
+                <p>
+                  <strong>Email:</strong> {cotacao.email}
+                </p>
+                <p>
+                  <strong>Status:</strong>
+                  <span
+                    className={
+                      cotacao.status === "aberta"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }
+                  >
+                    {cotacao.status}
+                  </span>
+                </p>
+                <button
+                  onClick={() => toggleCotacoesVisibility(cotacao.id)}
+                  className="ml-2 p-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  <FontAwesomeIcon
+                    icon={
+                      isCotacoesVisible[cotacao.id]
+                        ? faChevronUp
+                        : faChevronDown
+                    }
+                  />
+                </button>
+                {isCotacoesVisible[cotacao.id] && cotacao.cotações && (
+                  <ul className="mt-2">
+                    {cotacao.cotações.map((c, i) => (
+                      <li key={i} className="bg-gray-600 p-2 mb-2 rounded">
+                        <p>
+                          <strong>Valor:</strong> {c.valor}
+                        </p>
+                        <p>
+                          <strong>Data:</strong> {c.data}
+                        </p>
+                        <p>
+                          <strong>Fornecedor:</strong> {c.fornecedor}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
       )}
     </div>
   );
 }
-
-export default CadastroCotacao;

@@ -2,7 +2,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBars,
+  faClipboardList,
+  faPhone,
+  faShoppingCart,
+  faTimes,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
 import { FaSignOutAlt } from "react-icons/fa";
 
 function Sidebar() {
@@ -27,21 +34,25 @@ function Sidebar() {
           <ul>
             <li className="mb-2">
               <Link to="/user" className="text-white">
+                <FontAwesomeIcon icon={faUser} className="mr-2" />
                 Usuários
               </Link>
             </li>
             <li className="mb-2">
               <Link to="/cotacao" className="text-white">
+                <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
                 Fazer Cotação
               </Link>
             </li>
             <li className="mb-2">
               <Link to="/fornecedor" className="text-white">
+                <FontAwesomeIcon icon={faPhone} className="mr-2" />
                 Fornecedores
               </Link>
             </li>
             <li className="mb-2">
-              <Link to="/cotacao" className="text-white">
+              <Link to="/fazer-cotacao" className="text-white">
+                <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
                 Cotações
               </Link>
             </li>

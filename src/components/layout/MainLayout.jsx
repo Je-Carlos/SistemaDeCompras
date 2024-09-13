@@ -4,6 +4,7 @@ import Home from "../layout/Home";
 import CadastroProduto from "../cotacao/CadastroProduto";
 import Fornecedor from "../fornecedor/Fornecedor";
 import CadastroCotacao from "../cotacao/FazerCotacao";
+import ConsultaCotacao from "../cotacao/ConsultaCotacao";
 import User from "../usuarios/Colaborador";
 
 export default function MainLayout() {
@@ -21,6 +22,7 @@ export default function MainLayout() {
             <Route path="/cotacao" element={<CadastroCotacao />} />
             <Route path="/user" element={<User />} />
             <Route path="/home" element={<Home />} />
+            <Route path="/fazer-cotacao" element={<ConsultaCotacao />} />
             <Route path="*" element={<Home />} />
           </Routes>
         </div>
