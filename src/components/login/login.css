@@ -1,0 +1,15 @@
+@keyframes color-change {
+  0% {
+    color: #8b5cf6;
+  }
+  50% {
+    color: #d946ef;
+  }
+  100% {
+    color: #8b5cf6;
+  }
+}
+
+.animate-color-change {
+  animation: color-change 2s infinite;
+}
