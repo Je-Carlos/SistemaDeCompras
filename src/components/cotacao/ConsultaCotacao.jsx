@@ -1,199 +1,247 @@
 import { useState, useEffect } from "react";
-import { db, auth } from "../../firebase/firebaseConfig";
+import { db } from "../../firebase/firebaseConfig";
 import {
   collection,
-  addDoc,
   getDocs,
   updateDoc,
   doc,
+  arrayUnion,
 } from "firebase/firestore";
-import { useForm } from "react-hook-form";
-import { format } from "date-fns";
 
-function ConsultaCotacao() {
+export default function ConsultaCotacao() {
+  {
+    /*TODO: ARRUMAR AS COTAÇÕES*/
+  }
   const [cotacoes, setCotacoes] = useState([]);
   const [fornecedores, setFornecedores] = useState([]);
-  const [expandedCotacao, setExpandedCotacao] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [currentCotacaoId, setCurrentCotacaoId] = useState(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm();
-  const [error, setError] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [isCotacaoVisible, setIsCotacaoVisible] = useState(false);
+  const [selectedCotacao, setSelectedCotacao] = useState(null);
+  const [cotacao, setCotacao] = useState({
+    valor: "",
+    data: "",
+    fornecedor: "",
+  });
+  const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
-
-  const fetchCotacoes = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "cotacoes"));
-      const cotacoesList = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setCotacoes(cotacoesList);
-    } catch (error) {
-      console.error("Erro ao buscar cotações: ", error);
-    }
-  };
-
-  const fetchFornecedores = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "fornecedores"));
-      const fornecedoresList = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setFornecedores(fornecedoresList);
-    } catch (error) {
-      console.error("Erro ao buscar fornecedores: ", error);
-    }
-  };
+  const [isCotacoesVisible, setIsCotacoesVisible] = useState({});
 
   useEffect(() => {
-    fetchCotacoes();
+    const fetchAllCotacoes = async () => {
+      setCarregando(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "cotacoes"));
+        const cotacoesList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCotacoes(cotacoesList);
+      } catch (error) {
+        console.error("Erro ao buscar as cotações:", error);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    const fetchFornecedores = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "fornecedores"));
+        const fornecedoresList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setFornecedores(fornecedoresList);
+      } catch (error) {
+        console.error("Erro ao buscar fornecedores: ", error);
+      }
+    };
+
+    fetchAllCotacoes();
     fetchFornecedores();
   }, []);
 
-  const onSubmitCotacao = async (data) => {
-    try {
-      const novaCotacao = {
-        fornecedor: data.fornecedor,
-        preco: data.preco,
-        data: data.data,
-      };
+  const handleCotacaoSubmit = async (e) => {
+    e.preventDefault();
+    if (!cotacao.valor || !cotacao.data || !cotacao.fornecedor) {
+      setErro("Todos os campos são obrigatórios");
+      return;
+    }
 
-      const cotacaoRef = doc(db, "cotacoes", currentCotacaoId);
+    const produtoCotacoes = selectedCotacao.cotacoes || [];
+    if (produtoCotacoes.length >= 3) {
+      setErro("Limite de 3 cotações atingido para este produto");
+      return;
+    }
+
+    const novaCotacao = {
+      valor: cotacao.valor,
+      data: cotacao.data,
+      fornecedor: cotacao.fornecedor,
+    };
+
+    try {
+      const cotacaoRef = doc(db, "cotacoes", selectedCotacao.id);
       await updateDoc(cotacaoRef, {
-        cotacoes: [
-          ...(cotacoes.find((c) => c.id === currentCotacaoId).cotacoes || []),
-          novaCotacao,
-        ],
+        cotacoes: arrayUnion(novaCotacao),
+        status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "aberta",
       });
 
-      setSucesso("Cotação adicionada com sucesso!");
-      setError("");
-      reset();
-      setShowForm(false);
-      fetchCotacoes(); // Atualizar a lista de cotações
+      setSucesso("Cotação registrada com sucesso!");
+      setErro("");
+      setIsCotacaoVisible(false);
+      setCotacao({ valor: "", data: "", fornecedor: "" });
+
+      setCotacoes((prevCotacoes) =>
+        prevCotacoes.map((c) =>
+          c.id === selectedCotacao.id
+            ? {
+                ...c,
+                cotacoes: [...produtoCotacoes, novaCotacao],
+                status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "aberta",
+              }
+            : c
+        )
+      );
     } catch (error) {
-      setError("Erro ao adicionar cotação: " + error.message);
-      setSucesso("");
+      console.error("Erro ao registrar a cotação:", error);
+      setErro("Erro ao registrar a cotação: " + error.message);
     }
   };
 
-  const openForm = (cotacaoId) => {
-    setCurrentCotacaoId(cotacaoId);
-    setShowForm(true);
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setCurrentCotacaoId(null);
+  const toggleCotacoesVisibility = (id) => {
+    setIsCotacoesVisible((prevState) => ({
+      ...prevState,
+      [id]: !prevState[id],
+    }));
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-2/3">
-        <h2 className="text-2xl font-semibold mb-6 text-center text-white">
-          Consulta de Cotações
-        </h2>
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        {sucesso && <p className="text-green-500 text-center">{sucesso}</p>}
-        <div className="mt-4">
-          <ul className="list-none">
-            {cotacoes.map((cotacao) => (
-              <li
-                key={cotacao.id}
-                className="bg-gray-700 p-4 mb-2 rounded-lg shadow-md"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="font-semibold">{cotacao.produto}</span> -
-                    <span className="font-semibold">{cotacao.categoria}</span> -
-                    <span className="font-semibold">{cotacao.status}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <button
-                      className="ml-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                      onClick={() => openForm(cotacao.id)}
-                    >
-                      Cotar
-                    </button>
-                    <button
-                      className="ml-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                      onClick={() =>
-                        setExpandedCotacao(
-                          expandedCotacao === cotacao.id ? null : cotacao.id
-                        )
-                      }
-                    >
-                      {expandedCotacao === cotacao.id ? "▲" : "▼"}
-                    </button>
-                  </div>
-                </div>
-                {expandedCotacao === cotacao.id && (
-                  <div className="mt-2 bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400">
-                      Data e Hora:{" "}
-                      {format(new Date(cotacao.dataHora), "dd/MM/yyyy HH:mm")}
-                    </p>
-                    <div className="mt-4">
-                      <h3 className="text-lg font-semibold mb-2">Cotações:</h3>
-                      <div className="space-y-1">
-                        {cotacao.cotacoes &&
-                          cotacao.cotacoes.map((c, index) => (
-                            <div
-                              key={index}
-                              className="bg-gray-700 p-2 rounded-lg"
-                            >
-                              <div className="flex justify-between items-center">
-                                <span className="font-semibold">
-                                  Fornecedor:
-                                </span>
-                                <span>{c.fornecedor}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="font-semibold">Preço:</span>
-                                <span>{c.preco}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="font-semibold">Data:</span>
-                                <span>
-                                  {format(new Date(c.data), "dd/MM/yyyy")}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="bg-gray-800 p-8 rounded-lg shadow-md w-1/3">
-            <h2 className="text-2xl font-semibold mb-6 text-center text-white">
-              Adicionar Cotação
-            </h2>
-            <form onSubmit={handleSubmit(onSubmitCotacao)}>
+    <div className="p-4 max-w-md mx-auto bg-gray-800 text-white shadow-md rounded-lg">
+      <h2 className="text-lg font-bold mb-4 text-white">Todas as Cotações</h2>
+      {carregando ? (
+        <p>Carregando...</p>
+      ) : (
+        <ul className="mt-2">
+          {cotacoes.map((cotacao, index) => (
+            <li
+              key={index}
+              className="bg-gray-700 p-2 mb-2 rounded cursor-pointer"
+              onClick={() => toggleCotacoesVisibility(cotacao.id)}
+            >
+              <p>
+                <strong>Produto:</strong> {cotacao.produto}
+              </p>
+              <p>
+                <strong>Status:</strong>
+                <span
+                  className={
+                    cotacao.status === "aberta"
+                      ? "text-green-500"
+                      : "text-red-500"
+                  }
+                >
+                  {cotacao.status}
+                </span>
+              </p>
+              {isCotacoesVisible[cotacao.id] && (
+                <>
+                  <p>
+                    <strong>Categoria:</strong> {cotacao.categoria}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {cotacao.email}
+                  </p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCotacao(cotacao);
+                      setIsCotacaoVisible(true);
+                    }}
+                    className={`mt-2 p-2 rounded ${
+                      cotacao.status === "fechada"
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-purple-600 hover:bg-purple-700 text-white"
+                    }`}
+                    disabled={cotacao.status === "fechada"}
+                  >
+                    Fazer Cotação
+                  </button>
+                  {cotacao.cotacoes && (
+                    <ul className="mt-2">
+                      {cotacao.cotacoes.map((c, i) => (
+                        <li key={i} className="bg-gray-600 p-2 mb-2 rounded">
+                          <p>
+                            <strong>Valor:</strong> {c.valor}
+                          </p>
+                          <p>
+                            <strong>Data:</strong> {c.data}
+                          </p>
+                          <p>
+                            <strong>Fornecedor:</strong> {c.fornecedor}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {isCotacaoVisible && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center">
+          <div className="bg-gray-800 p-4 rounded-lg">
+            <h3 className="text-lg font-bold mb-4 text-white">Fazer Cotação</h3>
+            <form onSubmit={handleCotacaoSubmit}>
               <div className="mb-4">
                 <label
-                  className="block text-gray-300 text-sm font-bold mb-2"
+                  htmlFor="valor"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  Valor
+                </label>
+                <input
+                  name="valor"
+                  type="text"
+                  value={cotacao.valor}
+                  onChange={(e) =>
+                    setCotacao({ ...cotacao, valor: e.target.value })
+                  }
+                  className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  htmlFor="data"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  Data
+                </label>
+                <input
+                  name="data"
+                  type="date"
+                  value={cotacao.data}
+                  onChange={(e) =>
+                    setCotacao({ ...cotacao, data: e.target.value })
+                  }
+                  className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label
                   htmlFor="fornecedor"
+                  className="block text-sm font-medium text-gray-300"
                 >
                   Fornecedor
                 </label>
                 <select
-                  className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-                  id="fornecedor"
-                  {...register("fornecedor", { required: true })}
+                  name="fornecedor"
+                  value={cotacao.fornecedor}
+                  onChange={(e) =>
+                    setCotacao({ ...cotacao, fornecedor: e.target.value })
+                  }
+                  className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
                 >
                   <option value="">Selecione um fornecedor</option>
                   {fornecedores.map((fornecedor) => (
@@ -202,66 +250,20 @@ function ConsultaCotacao() {
                     </option>
                   ))}
                 </select>
-                {errors.fornecedor && (
-                  <p className="text-red-500 text-xs italic">
-                    Fornecedor é obrigatório.
-                  </p>
-                )}
               </div>
-              <div className="mb-4">
-                <label
-                  className="block text-gray-300 text-sm font-bold mb-2"
-                  htmlFor="preco"
-                >
-                  Preço
-                </label>
-                <input
-                  className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-                  id="preco"
-                  type="number"
-                  step="0.01"
-                  {...register("preco", { required: true })}
-                />
-                {errors.preco && (
-                  <p className="text-red-500 text-xs italic">
-                    Preço é obrigatório.
-                  </p>
-                )}
-              </div>
-              <div className="mb-4">
-                <label
-                  className="block text-gray-300 text-sm font-bold mb-2"
-                  htmlFor="data"
-                >
-                  Data
-                </label>
-                <input
-                  className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-                  id="data"
-                  type="date"
-                  {...register("data", { required: true })}
-                />
-                {errors.data && (
-                  <p className="text-red-500 text-xs italic">
-                    Data é obrigatória.
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <button
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                  type="submit"
-                >
-                  Adicionar Cotação
-                </button>
-                <button
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                  type="button"
-                  onClick={closeForm}
-                >
-                  Cancelar
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Registrar Cotação
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCotacaoVisible(false)}
+                className="w-full p-2 mt-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Cancelar
+              </button>
             </form>
           </div>
         </div>
@@ -269,5 +271,3 @@ function ConsultaCotacao() {
     </div>
   );
 }
-
-export default ConsultaCotacao;

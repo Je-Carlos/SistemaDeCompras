@@ -8,6 +8,7 @@ import Sidebar from "../sidebar/SideBar";
 import Logout from "../login/Logout";
 import Colaborador from "../usuarios/Colaborador";
 import ConsultaCotacao from "../cotacao/ConsultaCotacao";
+import Contatos from "../fornecedor/Contatos";
 import { useEffect, useState } from "react";
 
 export default function MainLayout() {
@@ -42,6 +43,7 @@ export default function MainLayout() {
                 <Route path="/home" element={<HomeAdmin />} />
                 <Route path="/produto" element={<CadastroProduto />} />
                 <Route path="/fornecedor" element={<Fornecedor />} />
+                <Route path="/contato" element={<Contatos />} />
                 <Route path="/colaborador" element={<Colaborador />} />
                 <Route path="/lista-cotacao" element={<ConsultaCotacao />} />
                 <Route path="/cotacao" element={<CadastroCotacao />} />

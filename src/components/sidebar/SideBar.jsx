@@ -6,7 +6,6 @@ import {
   faUserPlus,
   faClipboardList,
   faShoppingCart,
-  faPhone,
   faSignOutAlt,
   faBars,
   faTimes,
@@ -57,7 +56,7 @@ const Sidebar = () => {
                     className="flex items-center text-white hover:text-purple-400 transition duration-300"
                   >
                     <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
-                    Cadastro de Produtos
+                    Produtos
                   </Link>
                 </li>
                 <li className="mb-2">
@@ -66,7 +65,16 @@ const Sidebar = () => {
                     className="flex items-center text-white hover:text-purple-400 transition duration-300"
                   >
                     <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                    Cadastro de Fornecedores
+                    Fornecedores
+                  </Link>
+                </li>
+                <li className="mb-2">
+                  <Link
+                    to="/contato"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                    Contatos
                   </Link>
                 </li>
                 <li className="mb-2">
@@ -84,7 +92,7 @@ const Sidebar = () => {
                     className="flex items-center text-white hover:text-purple-400 transition duration-300"
                   >
                     <FontAwesomeIcon icon={faList} className="mr-2" />
-                    Lista de Cotações
+                    Cotações de Compras
                   </Link>
                 </li>
               </>
@@ -95,7 +103,7 @@ const Sidebar = () => {
                 className="flex items-center text-white hover:text-purple-400 transition duration-300"
               >
                 <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
-                Fazer Cotação
+                Requisição de Compras
               </Link>
             </li>
             <li className="mb-2">

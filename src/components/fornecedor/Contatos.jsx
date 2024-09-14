@@ -154,11 +154,20 @@ export default function Contatos() {
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
                 id="telefone"
                 type="text"
-                {...register("telefone", { required: true })}
+                {...register("telefone", {
+                  required: true,
+                  minLength: 11,
+                  maxLength: 11,
+                })}
+                onInput={(e) => {
+                  e.target.value = e.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 11);
+                }}
               />
               {errors.telefone && (
                 <p className="text-red-500 text-xs italic">
-                  Telefone é obrigatório.
+                  Telefone deve ter exatamente 11 dígitos.
                 </p>
               )}
             </div>

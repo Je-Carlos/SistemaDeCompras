@@ -1,21 +1,27 @@
-// FazerCotacao.jsx
 import { useState, useEffect } from "react";
 import { db, auth } from "../../firebase/firebaseConfig";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  where,
+} from "firebase/firestore";
 import { useForm } from "react-hook-form";
-import { format } from "date-fns";
 
 function FazerCotacao() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
+  const { register, handleSubmit, setValue, reset } = useForm();
+  const [cotacoes, setCotacoes] = useState([]);
+  const [produtos, setProdutos] = useState([]);
   const [error, setError] = useState("");
   const [sucesso, setSucesso] = useState("");
-  const [cotacoes, setCotacoes] = useState([]);
-  const [expandedCotacao, setExpandedCotacao] = useState(null);
-  const [showCotacoes, setShowCotacoes] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentCotacaoId, setCurrentCotacaoId] = useState(null);
+  const [selectedProduto, setSelectedProduto] = useState(null);
+  const [produtoCotacoes, setProdutoCotacoes] = useState([]);
 
   const fetchCotacoes = async () => {
     try {
@@ -23,7 +29,6 @@ function FazerCotacao() {
       if (!user) {
         throw new Error("Usuário não autenticado");
       }
-
       const q = query(
         collection(db, "cotacoes"),
         where("userId", "==", user.uid)
@@ -39,8 +44,39 @@ function FazerCotacao() {
     }
   };
 
+  const fetchProdutos = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "produtos"));
+      const produtosList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProdutos(produtosList);
+    } catch (error) {
+      console.error("Erro ao buscar produtos: ", error);
+    }
+  };
+
+  const fetchProdutoCotacoes = async (produtoId) => {
+    try {
+      const q = query(
+        collection(db, "cotacoes"),
+        where("produtoId", "==", produtoId)
+      );
+      const querySnapshot = await getDocs(q);
+      const cotacoesList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProdutoCotacoes(cotacoesList);
+    } catch (error) {
+      console.error("Erro ao buscar cotações do produto: ", error);
+    }
+  };
+
   useEffect(() => {
     fetchCotacoes();
+    fetchProdutos();
   }, []);
 
   const onSubmit = async (data) => {
@@ -49,31 +85,69 @@ function FazerCotacao() {
       if (!user) {
         throw new Error("Usuário não autenticado");
       }
-
       const novaCotacao = {
-        userId: user.uid,
         produto: data.produto,
-        categoria: data.categoria,
-        dataHora: new Date().toISOString(),
+        quantidade: data.quantidade,
+        observacao: data.observacao,
+        userId: user.uid,
+        userEmail: user.email,
+        data: new Date().toLocaleString(),
         status: "aberta",
       };
 
-      await addDoc(collection(db, "cotacoes"), novaCotacao);
+      if (isEditing) {
+        const cotacaoRef = doc(db, "cotacoes", currentCotacaoId);
+        await updateDoc(cotacaoRef, novaCotacao);
+        setSucesso("Compra atualizada com sucesso!");
+      } else {
+        await addDoc(collection(db, "cotacoes"), novaCotacao);
+        setSucesso("Compra cadastrada com sucesso!");
+      }
 
-      setSucesso("Cotação cadastrada com sucesso!");
       setError("");
-      fetchCotacoes(); // Atualizar a lista de cotações
+      fetchCotacoes();
+      reset();
+      setIsEditing(false);
+      setCurrentCotacaoId(null);
     } catch (error) {
-      setError("Erro ao cadastrar cotação: " + error.message);
+      setError("Erro ao cadastrar compra: " + error.message);
       setSucesso("");
     }
   };
 
+  const editCotacao = (cotacao) => {
+    setValue("produto", cotacao.produto);
+    setValue("quantidade", cotacao.quantidade);
+    setValue("observacao", cotacao.observacao);
+    setIsEditing(true);
+    setCurrentCotacaoId(cotacao.id);
+  };
+
+  const deleteCotacao = async (cotacaoId) => {
+    try {
+      const cotacaoRef = doc(db, "cotacoes", cotacaoId);
+      await deleteDoc(cotacaoRef);
+      setSucesso("Compras excluída com sucesso!");
+      setError("");
+      fetchCotacoes();
+    } catch (error) {
+      setError("Erro ao excluir Compras: " + error.message);
+      setSucesso("");
+    }
+  };
+
+  const handleProdutoClick = (produto) => {
+    setSelectedProduto(produto);
+    fetchProdutoCotacoes(produto.id);
+  };
+  {
+    /*TODO: ARRUMAR A EXIBICAO DA COTACAO*/
+  }
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-1/3">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl">
         <h2 className="text-2xl font-semibold mb-6 text-center text-white">
-          Fazer Cotação
+          Fazer Compras
         </h2>
         {error && <p className="text-red-500 text-center">{error}</p>}
         {sucesso && <p className="text-green-500 text-center">{sucesso}</p>}
@@ -85,116 +159,177 @@ function FazerCotacao() {
             >
               Produto
             </label>
-            <input
+            <select
               className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
               id="produto"
-              type="text"
+              name="produto"
               {...register("produto", { required: true })}
-            />
-            {errors.produto && (
-              <p className="text-red-500 text-xs italic">
-                Produto é obrigatório.
-              </p>
-            )}
+            >
+              <option value="">Selecione um produto</option>
+              {produtos.map((produto) => (
+                <option key={produto.id} value={produto.nome}>
+                  {produto.nome}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="mb-4">
             <label
               className="block text-gray-300 text-sm font-bold mb-2"
-              htmlFor="categoria"
+              htmlFor="quantidade"
             >
-              Categoria
+              Quantidade
             </label>
             <input
               className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-              id="categoria"
-              type="text"
-              {...register("categoria", { required: true })}
+              id="quantidade"
+              type="number"
+              name="quantidade"
+              placeholder="Quantidade"
+              {...register("quantidade", { required: true })}
             />
-            {errors.categoria && (
-              <p className="text-red-500 text-xs italic">
-                Categoria é obrigatória.
-              </p>
-            )}
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-300 text-sm font-bold mb-2"
+              htmlFor="observacao"
+            >
+              Observação
+            </label>
+            <textarea
+              className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+              id="observacao"
+              name="observacao"
+              placeholder="Observação"
+              {...register("observacao")}
+            />
           </div>
           <div className="flex items-center justify-between">
             <button
               className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
               type="submit"
             >
-              Cadastrar Cotação
+              {isEditing ? "Atualizar Compra" : "Cadastrar Compra"}
             </button>
           </div>
         </form>
-        <div className="mt-4">
-          <button
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 w-full text-left"
-            onClick={() => setShowCotacoes(!showCotacoes)}
-          >
-            {showCotacoes
-              ? "Esconder Cotações Feitas"
-              : "Mostrar Cotações Feitas"}
-          </button>
-          {showCotacoes && (
-            <div className="mt-4">
-              <ul className="list-none">
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4 text-center">
+            Cotações de Compras
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-gray-700 rounded-lg">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b border-gray-600">
+                    Produto
+                  </th>
+                  <th className="py-2 px-4 border-b border-gray-600">
+                    Quantidade
+                  </th>
+                  <th className="py-2 px-4 border-b border-gray-600">
+                    Observação
+                  </th>
+                  <th className="py-2 px-4 border-b border-gray-600">Data</th>
+                  <th className="py-2 px-4 border-b border-gray-600">Email</th>
+                  <th className="py-2 px-4 border-b border-gray-600">Status</th>
+                  <th className="py-2 px-4 border-b border-gray-600">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
                 {cotacoes.map((cotacao) => (
-                  <li
+                  <tr
                     key={cotacao.id}
-                    className="bg-gray-700 p-4 mb-2 rounded-lg shadow-md"
+                    className="hover:bg-gray-600"
+                    onClick={() => handleProdutoClick(cotacao)}
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold">
-                        {cotacao.produto} - {cotacao.categoria} -{" "}
-                        {cotacao.status}
-                      </span>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {cotacao.produto}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {cotacao.quantidade}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {cotacao.observacao}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {cotacao.data}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {cotacao.userEmail}
+                    </td>
+                    <td
+                      className={`py-2 px-4 border-b border-gray-600 ${
+                        cotacao.status === "aberta"
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {cotacao.status}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
                       <button
-                        className="ml-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                        onClick={() =>
-                          setExpandedCotacao(
-                            expandedCotacao === cotacao.id ? null : cotacao.id
-                          )
-                        }
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 mr-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          editCotacao(cotacao);
+                        }}
                       >
-                        {expandedCotacao === cotacao.id ? "▲" : "▼"}
+                        Editar
                       </button>
-                    </div>
-                    {expandedCotacao === cotacao.id && (
-                      <div className="mt-2 bg-gray-800 p-4 rounded-lg">
-                        <p className="text-sm text-gray-400">
-                          Data e Hora:{" "}
-                          {format(
-                            new Date(cotacao.dataHora),
-                            "dd/MM/yyyy HH:mm"
-                          )}
-                        </p>
-                        <div className="mt-4">
-                          <h3 className="text-lg font-semibold mb-2">
-                            Cotações:
-                          </h3>
-                          <ul className="list-disc list-inside text-gray-300">
-                            {cotacao.cotacoes &&
-                              cotacao.cotacoes.map((c, index) => (
-                                <li key={index} className="mb-2">
-                                  <div className="flex justify-between">
-                                    <span>Fornecedor: {c.fornecedor}</span>
-                                    <span>Preço: {c.preco}</span>
-                                    <span>
-                                      Data:{" "}
-                                      {format(new Date(c.data), "dd/MM/yyyy")}
-                                    </span>
-                                  </div>
-                                </li>
-                              ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-                  </li>
+                      <button
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteCotacao(cotacao.id);
+                        }}
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-            </div>
-          )}
+              </tbody>
+            </table>
+          </div>
         </div>
+        {selectedProduto && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4 text-center">
+              Cotações do Produto: {selectedProduto.produto}
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-gray-700 rounded-lg">
+                <thead>
+                  <tr>
+                    <th className="py-2 px-4 border-b border-gray-600">
+                      Fornecedor
+                    </th>
+                    <th className="py-2 px-4 border-b border-gray-600">
+                      Preço
+                    </th>
+                    <th className="py-2 px-4 border-b border-gray-600">Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {produtoCotacoes.map((cotacao) => (
+                    <tr key={cotacao.id} className="hover:bg-gray-600">
+                      <td className="py-2 px-4 border-b border-gray-600">
+                        {cotacao.fornecedor}
+                      </td>
+                      <td className="py-2 px-4 border-b border-gray-600">
+                        {cotacao.preco}
+                      </td>
+                      <td className="py-2 px-4 border-b border-gray-600">
+                        {cotacao.data}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

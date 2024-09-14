@@ -117,7 +117,7 @@ function CadastroUsuario() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-1/3">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl">
         <h2 className="text-2xl font-semibold mb-6 text-center text-white">
           Cadastro de Usuário
         </h2>
@@ -202,47 +202,64 @@ function CadastroUsuario() {
             </button>
           </div>
         </form>
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2">Usuários Cadastrados:</h3>
-          <ul className="list-disc list-inside">
-            {usuarios.map((usuario) => (
-              <li
-                key={usuario.id}
-                className="flex justify-between items-center"
-              >
-                <span>
-                  {usuario.nome} - {usuario.email} - {usuario.tipo}
-                </span>
-                <div className="flex items-center">
-                  {usuario.ativo ? (
-                    <button
-                      className="ml-4 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                      onClick={() => handleDesativarConta(usuario.id)}
-                    >
-                      Desativar
-                    </button>
-                  ) : (
-                    <button
-                      className="ml-4 bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                      onClick={() => handleReativarConta(usuario.id)}
-                    >
-                      Reativar
-                    </button>
-                  )}
-                  <select
-                    className="ml-4 shadow appearance-none border border-gray-600 rounded py-1 px-2 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-                    value={usuario.tipo}
-                    onChange={(e) =>
-                      handleChangeTipo(usuario.id, e.target.value)
-                    }
-                  >
-                    <option value="colaborador">Colaborador</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4 text-center">
+            Usuários Cadastrados
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-gray-700 rounded-lg">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b border-gray-600">Nome</th>
+                  <th className="py-2 px-4 border-b border-gray-600">Email</th>
+                  <th className="py-2 px-4 border-b border-gray-600">Tipo</th>
+                  <th className="py-2 px-4 border-b border-gray-600">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((usuario) => (
+                  <tr key={usuario.id} className="hover:bg-gray-600">
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {usuario.nome}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {usuario.email}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {usuario.tipo}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
+                      {usuario.ativo ? (
+                        <button
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 mr-2"
+                          onClick={() => handleDesativarConta(usuario.id)}
+                        >
+                          Desativar
+                        </button>
+                      ) : (
+                        <button
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 mr-2"
+                          onClick={() => handleReativarConta(usuario.id)}
+                        >
+                          Reativar
+                        </button>
+                      )}
+                      <select
+                        className="shadow appearance-none border border-gray-600 rounded py-1 px-2 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+                        value={usuario.tipo}
+                        onChange={(e) =>
+                          handleChangeTipo(usuario.id, e.target.value)
+                        }
+                      >
+                        <option value="colaborador">Colaborador</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

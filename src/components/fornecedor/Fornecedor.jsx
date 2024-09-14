@@ -3,6 +3,7 @@ import { db } from "../../firebase/firebaseConfig";
 import {
   collection,
   getDocs,
+  addDoc,
   doc,
   deleteDoc,
   updateDoc,
@@ -48,10 +49,9 @@ export default function Fornecedor() {
         await updateDoc(fornecedorRef, {
           nome: data.nome,
           telefone: data.telefone,
-          email: data.email,
-          endereco: data.endereco,
+          email: data.email || "",
+          endereco: data.endereco || "",
           cnpj: data.cnpj,
-          cep: data.cep,
         });
         setSucesso("Fornecedor atualizado com sucesso!");
       } else {
@@ -59,10 +59,9 @@ export default function Fornecedor() {
         const novoFornecedor = {
           nome: data.nome,
           telefone: data.telefone,
-          email: data.email,
-          endereco: data.endereco,
+          email: data.email || "",
+          endereco: data.endereco || "",
           cnpj: data.cnpj,
-          cep: data.cep,
         };
         await addDoc(collection(db, "fornecedores"), novoFornecedor);
         setSucesso("Fornecedor cadastrado com sucesso!");
@@ -85,7 +84,6 @@ export default function Fornecedor() {
     setValue("email", fornecedor.email);
     setValue("endereco", fornecedor.endereco);
     setValue("cnpj", fornecedor.cnpj);
-    setValue("cep", fornecedor.cep);
     setShowCadastro(true);
   };
 
@@ -141,11 +139,16 @@ export default function Fornecedor() {
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
                 id="telefone"
                 type="text"
-                {...register("telefone", { required: true })}
+                maxLength="11"
+                {...register("telefone", {
+                  required: true,
+                  minLength: 11,
+                  maxLength: 11,
+                })}
               />
               {errors.telefone && (
                 <p className="text-red-500 text-xs italic">
-                  Telefone é obrigatório.
+                  Telefone deve ter exatamente 11 dígitos.
                 </p>
               )}
             </div>
@@ -154,38 +157,14 @@ export default function Fornecedor() {
                 className="block text-sm font-medium text-gray-300"
                 htmlFor="email"
               >
-                Email
+                Email (Opcional)
               </label>
               <input
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
                 id="email"
                 type="email"
-                {...register("email", { required: true })}
+                {...register("email")}
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs italic">
-                  Email é obrigatório.
-                </p>
-              )}
-            </div>
-            <div className="mb-4">
-              <label
-                className="block text-sm font-medium text-gray-300"
-                htmlFor="endereco"
-              >
-                Endereço
-              </label>
-              <input
-                className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="endereco"
-                type="text"
-                {...register("endereco", { required: true })}
-              />
-              {errors.endereco && (
-                <p className="text-red-500 text-xs italic">
-                  Endereço é obrigatório.
-                </p>
-              )}
             </div>
             <div className="mb-4">
               <label
@@ -198,32 +177,32 @@ export default function Fornecedor() {
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
                 id="cnpj"
                 type="text"
-                {...register("cnpj", { required: true })}
+                maxLength="14"
+                {...register("cnpj", {
+                  required: true,
+                  minLength: 14,
+                  maxLength: 14,
+                })}
               />
               {errors.cnpj && (
                 <p className="text-red-500 text-xs italic">
-                  CNPJ é obrigatório.
+                  CNPJ deve ter exatamente 14 dígitos.
                 </p>
               )}
             </div>
             <div className="mb-4">
               <label
                 className="block text-sm font-medium text-gray-300"
-                htmlFor="cep"
+                htmlFor="endereco"
               >
-                CEP
+                Endereço (Opcional)
               </label>
               <input
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="cep"
+                id="endereco"
                 type="text"
-                {...register("cep", { required: true })}
+                {...register("endereco")}
               />
-              {errors.cep && (
-                <p className="text-red-500 text-xs italic">
-                  CEP é obrigatório.
-                </p>
-              )}
             </div>
             <button
               type="submit"
@@ -263,21 +242,24 @@ export default function Fornecedor() {
                 <p>
                   <strong>Nome:</strong> {fornecedor.nome}
                 </p>
-                <p>
-                  <strong>Endereço:</strong> {fornecedor.endereco}
-                </p>
-                <p>
-                  <strong>Telefone:</strong> {fornecedor.telefone}
-                </p>
-                <p>
-                  <strong>Email:</strong> {fornecedor.email}
-                </p>
+                {fornecedor.telefone && (
+                  <p>
+                    <strong>Telefone:</strong> {fornecedor.telefone}
+                  </p>
+                )}
+                {fornecedor.email && (
+                  <p>
+                    <strong>Email:</strong> {fornecedor.email}
+                  </p>
+                )}
                 <p>
                   <strong>CNPJ:</strong> {fornecedor.cnpj}
                 </p>
-                <p>
-                  <strong>CEP:</strong> {fornecedor.cep}
-                </p>
+                {fornecedor.endereco && (
+                  <p>
+                    <strong>Endereço:</strong> {fornecedor.endereco}
+                  </p>
+                )}
                 <div className="flex space-x-2 mt-2">
                   <button
                     onClick={() => handleEdit(fornecedor)}
