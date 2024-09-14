@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { database } from "../../firebase/firebaseConfig";
-import { ref, set, push, onValue } from "firebase/database";
+import { db } from "../../firebase/firebaseConfig";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 
 export default function CadastroContatos() {
   const [fornecedor, setFornecedor] = useState({
@@ -16,18 +16,21 @@ export default function CadastroContatos() {
   const [isCadastroVisible, setIsCadastroVisible] = useState(false);
 
   useEffect(() => {
-    // Carregar fornecedores do Firebase Database
-    const fornecedoresRef = ref(database, "fornecedores");
-    onValue(fornecedoresRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const fornecedoresList = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
+    // Carregar fornecedores do Firestore Database
+    const fetchFornecedores = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "fornecedores"));
+        const fornecedoresList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
         }));
         setFornecedores(fornecedoresList);
+      } catch (error) {
+        console.error("Erro ao buscar fornecedores: ", error);
       }
-    });
+    };
+
+    fetchFornecedores();
   }, []);
 
   const handleChange = (e) => {
@@ -63,34 +66,38 @@ export default function CadastroContatos() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const { nome, cnpj, endereco, telefone } = fornecedor;
     if (!nome || !cnpj || !endereco || !telefone) {
       setErro("Todos os campos são obrigatórios");
       return;
     }
-    // Adicionar novo fornecedor ao Firebase Database
-    const fornecedoresRef = ref(database, "fornecedores");
-    const newFornecedorRef = push(fornecedoresRef);
-    set(newFornecedorRef, fornecedor)
-      .then(() => {
-        console.log("Fornecedor cadastrado com sucesso!");
-        setFornecedor({
-          nome: "",
-          cnpj: "",
-          endereco: "",
-          telefone: "",
-          cep: "",
-        });
-        setErro("");
-        setSucesso("Fornecedor cadastrado com sucesso!"); // Define a mensagem de sucesso
-        setIsCadastroVisible(false);
-      })
-      .catch((error) => {
-        console.error("Erro ao cadastrar fornecedor: ", error);
-        setErro("Erro ao cadastrar fornecedor: " + error.message);
+    // Adicionar novo fornecedor ao Firestore Database
+    try {
+      await addDoc(collection(db, "fornecedores"), fornecedor);
+      console.log("Fornecedor cadastrado com sucesso!");
+      setFornecedor({
+        nome: "",
+        cnpj: "",
+        endereco: "",
+        telefone: "",
+        cep: "",
       });
+      setErro("");
+      setSucesso("Fornecedor cadastrado com sucesso!"); // Define a mensagem de sucesso
+      setIsCadastroVisible(false);
+      // Atualizar a lista de fornecedores
+      const querySnapshot = await getDocs(collection(db, "fornecedores"));
+      const fornecedoresList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setFornecedores(fornecedoresList);
+    } catch (error) {
+      console.error("Erro ao cadastrar fornecedor: ", error);
+      setErro("Erro ao cadastrar fornecedor: " + error.message);
+    }
   };
 
   const handleNovoFornecedor = () => {
@@ -191,46 +198,50 @@ export default function CadastroContatos() {
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
               />
             </div>
-            <button
-              type="submit"
-              className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-            >
-              Cadastrar
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                type="submit"
+              >
+                Cadastrar Fornecedor
+              </button>
+            </div>
           </form>
-          <button
-            onClick={() => setIsCadastroVisible(false)}
-            className="w-full p-2 mt-4 bg-gray-600 text-white rounded hover:bg-gray-700"
-          >
-            Voltar
-          </button>
         </>
       ) : (
         <>
           <h2 className="text-lg font-bold mb-4 text-white">
             Lista de Fornecedores
           </h2>
-          {sucesso && <div className="text-green-500 mb-2">{sucesso}</div>}
-          <ul className="mb-4">
-            {fornecedores.map((fornecedor) => (
-              <li key={fornecedor.id} className="mb-2 p-2 bg-gray-700 rounded">
-                <p className="text-sm text-gray-300">Nome: {fornecedor.nome}</p>
-                <p className="text-sm text-gray-300">CNPJ: {fornecedor.cnpj}</p>
-                <p className="text-sm text-gray-300">
-                  Endereço: {fornecedor.endereco}
-                </p>
-                <p className="text-sm text-gray-300">
-                  Telefone: {fornecedor.telefone}
-                </p>
-              </li>
-            ))}
-          </ul>
           <button
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 mb-4"
             onClick={handleNovoFornecedor}
-            className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
           >
             Novo Fornecedor
           </button>
+          <div className="space-y-4">
+            {fornecedores.map((fornecedor) => (
+              <div
+                key={fornecedor.id}
+                className="bg-gray-700 p-4 rounded-lg shadow-md"
+              >
+                <div className="flex flex-col space-y-2">
+                  <span className="font-semibold text-lg">
+                    {fornecedor.nome}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    CNPJ: {fornecedor.cnpj}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    Endereço: {fornecedor.endereco}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    Telefone: {fornecedor.telefone}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

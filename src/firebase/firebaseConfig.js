@@ -11,7 +11,7 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyByJJOwW8tXKNbCaVT_WLTe-MhQ5d9SwdU",
   authDomain: "react-3d2b8.firebaseapp.com",
-  databaseURL: "https://react-3d2b8-default-rtdb.firebaseio.com/", // Adicione a URL do banco de dados aqui
+  databaseURL: "https://react-3d2b8-default-rtdb.firebaseio.com",
   projectId: "react-3d2b8",
   storageBucket: "react-3d2b8.appspot.com",
   messagingSenderId: "1087330933061",

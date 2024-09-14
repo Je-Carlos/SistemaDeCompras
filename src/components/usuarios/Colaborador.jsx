@@ -20,6 +20,45 @@ function CadastroUsuario() {
   const [sucesso, setSucesso] = useState("");
   const [usuarios, setUsuarios] = useState([]);
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setUsuario((prevUsuario) => ({
+      ...prevUsuario,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErro("");
+    setSucesso("");
+
+    try {
+      // Criar usuário no Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        usuario.email,
+        usuario.senha
+      );
+      const user = userCredential.user;
+
+      // Adicionar usuário ao Firestore
+      await addDoc(collection(db, "usuarios"), {
+        uid: user.uid,
+        nome: usuario.nome,
+        email: usuario.email,
+        tipo: usuario.tipo,
+        ativo: true,
+      });
+
+      setSucesso("Usuário cadastrado com sucesso!");
+      setUsuario({ nome: "", email: "", senha: "", tipo: "colaborador" });
+      fetchUsuarios(); // Atualizar a lista de usuários
+    } catch (error) {
+      setErro("Erro ao cadastrar usuário: " + error.message);
+    }
+  };
+
   const fetchUsuarios = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "usuarios"));
@@ -37,45 +76,6 @@ function CadastroUsuario() {
     fetchUsuarios();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUsuario((prevUsuario) => ({
-      ...prevUsuario,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        usuario.email,
-        usuario.senha
-      );
-      await addDoc(collection(db, "usuarios"), {
-        nome: usuario.nome,
-        email: usuario.email,
-        tipo: usuario.tipo,
-        uid: userCredential.user.uid,
-        ativo: true,
-      });
-
-      setSucesso("Usuário cadastrado com sucesso!");
-      setErro("");
-      setUsuario({
-        nome: "",
-        email: "",
-        senha: "",
-        tipo: "colaborador",
-      });
-      fetchUsuarios();
-    } catch (error) {
-      setErro(error.message);
-      setSucesso("");
-    }
-  };
-
   const handleDesativarConta = async (id) => {
     try {
       const usuarioRef = doc(db, "usuarios", id);
@@ -84,7 +84,7 @@ function CadastroUsuario() {
       setErro("");
       fetchUsuarios();
     } catch (error) {
-      setErro("Erro ao desativar usuário");
+      setErro("Erro ao desativar usuário: " + error.message);
       setSucesso("");
     }
   };
@@ -97,7 +97,7 @@ function CadastroUsuario() {
       setErro("");
       fetchUsuarios();
     } catch (error) {
-      setErro("Erro ao reativar usuário");
+      setErro("Erro ao reativar usuário: " + error.message);
       setSucesso("");
     }
   };
@@ -110,7 +110,7 @@ function CadastroUsuario() {
       setErro("");
       fetchUsuarios();
     } catch (error) {
-      setErro("Erro ao alterar tipo de usuário");
+      setErro("Erro ao alterar tipo de usuário: " + error.message);
       setSucesso("");
     }
   };
@@ -161,6 +161,23 @@ function CadastroUsuario() {
           <div className="mb-4">
             <label
               className="block text-gray-300 text-sm font-bold mb-2"
+              htmlFor="senha"
+            >
+              Senha
+            </label>
+            <input
+              className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+              id="senha"
+              type="password"
+              name="senha"
+              placeholder="********"
+              value={usuario.senha}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-300 text-sm font-bold mb-2"
               htmlFor="tipo"
             >
               Tipo
@@ -176,23 +193,6 @@ function CadastroUsuario() {
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div className="mb-6">
-            <label
-              className="block text-gray-300 text-sm font-bold mb-2"
-              htmlFor="senha"
-            >
-              Senha
-            </label>
-            <input
-              className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-              id="senha"
-              type="password"
-              name="senha"
-              placeholder="********"
-              value={usuario.senha}
-              onChange={handleChange}
-            />
-          </div>
           <div className="flex items-center justify-between">
             <button
               className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
@@ -203,7 +203,7 @@ function CadastroUsuario() {
           </div>
         </form>
         <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2">Emails Cadastrados:</h3>
+          <h3 className="text-lg font-semibold mb-2">Usuários Cadastrados:</h3>
           <ul className="list-disc list-inside">
             {usuarios.map((usuario) => (
               <li
@@ -211,7 +211,7 @@ function CadastroUsuario() {
                 className="flex justify-between items-center"
               >
                 <span>
-                  {usuario.email} - {usuario.tipo}
+                  {usuario.nome} - {usuario.email} - {usuario.tipo}
                 </span>
                 <div className="flex items-center">
                   {usuario.ativo ? (
