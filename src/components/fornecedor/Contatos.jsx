@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { db } from "../../firebase/firebaseConfig";
 import {
   collection,
+  addDoc,
   getDocs,
   doc,
   deleteDoc,
@@ -9,10 +10,11 @@ import {
 } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 
-export default function Fornecedor() {
+export default function Contatos() {
+  const [contatos, setContatos] = useState([]);
   const [fornecedores, setFornecedores] = useState([]);
   const [showCadastro, setShowCadastro] = useState(false);
-  const [editandoFornecedor, setEditandoFornecedor] = useState(null);
+  const [editandoContato, setEditandoContato] = useState(null);
   const {
     register,
     handleSubmit,
@@ -22,6 +24,19 @@ export default function Fornecedor() {
   } = useForm();
   const [error, setError] = useState("");
   const [sucesso, setSucesso] = useState("");
+
+  const fetchContatos = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "contatos"));
+      const contatosList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setContatos(contatosList);
+    } catch (error) {
+      console.error("Erro ao buscar contatos: ", error);
+    }
+  };
 
   const fetchFornecedores = async () => {
     try {
@@ -37,66 +52,66 @@ export default function Fornecedor() {
   };
 
   useEffect(() => {
+    fetchContatos();
     fetchFornecedores();
   }, []);
 
   const onSubmit = async (data) => {
     try {
-      if (editandoFornecedor) {
-        // Atualizar fornecedor existente
-        const fornecedorRef = doc(db, "fornecedores", editandoFornecedor.id);
-        await updateDoc(fornecedorRef, {
+      if (editandoContato) {
+        // Atualizar contato existente
+        const contatoRef = doc(db, "contatos", editandoContato.id);
+        await updateDoc(contatoRef, {
           nome: data.nome,
           telefone: data.telefone,
           email: data.email,
-          endereco: data.endereco,
-          cnpj: data.cnpj,
-          cep: data.cep,
+          fornecedorId: data.fornecedorId,
         });
-        setSucesso("Fornecedor atualizado com sucesso!");
+        setSucesso("Contato atualizado com sucesso!");
       } else {
-        // Adicionar novo fornecedor
-        const novoFornecedor = {
+        // Adicionar novo contato
+        const novoContato = {
           nome: data.nome,
           telefone: data.telefone,
           email: data.email,
-          endereco: data.endereco,
-          cnpj: data.cnpj,
-          cep: data.cep,
+          fornecedorId: data.fornecedorId,
         };
-        await addDoc(collection(db, "fornecedores"), novoFornecedor);
-        setSucesso("Fornecedor cadastrado com sucesso!");
+        await addDoc(collection(db, "contatos"), novoContato);
+        setSucesso("Contato cadastrado com sucesso!");
       }
       setError("");
       reset();
       setShowCadastro(false);
-      setEditandoFornecedor(null);
-      fetchFornecedores(); // Atualizar a lista de fornecedores
+      setEditandoContato(null);
+      fetchContatos(); // Atualizar a lista de contatos
     } catch (error) {
-      setError("Erro ao cadastrar fornecedor: " + error.message);
+      setError("Erro ao cadastrar contato: " + error.message);
       setSucesso("");
     }
   };
 
-  const handleEdit = (fornecedor) => {
-    setEditandoFornecedor(fornecedor);
-    setValue("nome", fornecedor.nome);
-    setValue("telefone", fornecedor.telefone);
-    setValue("email", fornecedor.email);
-    setValue("endereco", fornecedor.endereco);
-    setValue("cnpj", fornecedor.cnpj);
-    setValue("cep", fornecedor.cep);
+  const handleEdit = (contato) => {
+    setEditandoContato(contato);
+    setValue("nome", contato.nome);
+    setValue("telefone", contato.telefone);
+    setValue("email", contato.email);
+    setValue("fornecedorId", contato.fornecedorId);
     setShowCadastro(true);
   };
 
-  const handleDelete = async (fornecedorId) => {
+  const handleDelete = async (contatoId) => {
     try {
-      await deleteDoc(doc(db, "fornecedores", fornecedorId));
-      setSucesso("Fornecedor excluído com sucesso!");
-      fetchFornecedores(); // Atualizar a lista de fornecedores
+      await deleteDoc(doc(db, "contatos", contatoId));
+      setSucesso("Contato excluído com sucesso!");
+      fetchContatos(); // Atualizar a lista de contatos
     } catch (error) {
-      setError("Erro ao excluir fornecedor: " + error.message);
+      setError("Erro ao excluir contato: " + error.message);
     }
+  };
+
+  const getFornecedorNome = (fornecedorId) => {
+    const fornecedor = fornecedores.find((f) => f.id === fornecedorId);
+    return fornecedor ? fornecedor.nome : "Fornecedor não encontrado";
   };
 
   return (
@@ -104,9 +119,7 @@ export default function Fornecedor() {
       {showCadastro ? (
         <div>
           <h2 className="text-lg font-bold mb-4 text-white">
-            {editandoFornecedor
-              ? "Editar Fornecedor"
-              : "Cadastro de Fornecedor"}
+            {editandoContato ? "Editar Contato" : "Cadastro de Contato"}
           </h2>
           {error && <p className="text-red-500 text-center">{error}</p>}
           {sucesso && <p className="text-green-500 text-center">{sucesso}</p>}
@@ -171,57 +184,25 @@ export default function Fornecedor() {
             <div className="mb-4">
               <label
                 className="block text-sm font-medium text-gray-300"
-                htmlFor="endereco"
+                htmlFor="fornecedorId"
               >
-                Endereço
+                Fornecedor
               </label>
-              <input
+              <select
                 className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="endereco"
-                type="text"
-                {...register("endereco", { required: true })}
-              />
-              {errors.endereco && (
-                <p className="text-red-500 text-xs italic">
-                  Endereço é obrigatório.
-                </p>
-              )}
-            </div>
-            <div className="mb-4">
-              <label
-                className="block text-sm font-medium text-gray-300"
-                htmlFor="cnpj"
+                id="fornecedorId"
+                {...register("fornecedorId", { required: true })}
               >
-                CNPJ
-              </label>
-              <input
-                className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="cnpj"
-                type="text"
-                {...register("cnpj", { required: true })}
-              />
-              {errors.cnpj && (
+                <option value="">Selecione um fornecedor</option>
+                {fornecedores.map((fornecedor) => (
+                  <option key={fornecedor.id} value={fornecedor.id}>
+                    {fornecedor.nome}
+                  </option>
+                ))}
+              </select>
+              {errors.fornecedorId && (
                 <p className="text-red-500 text-xs italic">
-                  CNPJ é obrigatório.
-                </p>
-              )}
-            </div>
-            <div className="mb-4">
-              <label
-                className="block text-sm font-medium text-gray-300"
-                htmlFor="cep"
-              >
-                CEP
-              </label>
-              <input
-                className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="cep"
-                type="text"
-                {...register("cep", { required: true })}
-              />
-              {errors.cep && (
-                <p className="text-red-500 text-xs italic">
-                  CEP é obrigatório.
+                  Fornecedor é obrigatório.
                 </p>
               )}
             </div>
@@ -229,15 +210,13 @@ export default function Fornecedor() {
               type="submit"
               className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
             >
-              {editandoFornecedor
-                ? "Atualizar Fornecedor"
-                : "Cadastrar Fornecedor"}
+              {editandoContato ? "Atualizar Contato" : "Cadastrar Contato"}
             </button>
             <button
               type="button"
               onClick={() => {
                 setShowCadastro(false);
-                setEditandoFornecedor(null);
+                setEditandoContato(null);
                 reset();
               }}
               className="w-full p-2 mt-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -249,52 +228,47 @@ export default function Fornecedor() {
       ) : (
         <div>
           <h2 className="text-lg font-bold mb-4 text-white">
-            Lista de Fornecedores
+            Lista de Contatos
           </h2>
           <button
             onClick={() => setShowCadastro(true)}
             className="mb-4 p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
           >
-            Cadastrar Fornecedor
+            Cadastrar Contato
           </button>
-          <div>
-            {fornecedores.map((fornecedor) => (
-              <div key={fornecedor.id} className="bg-gray-700 p-4 mb-2 rounded">
+          <ul>
+            {contatos.map((contato) => (
+              <li key={contato.id} className="bg-gray-700 p-4 mb-2 rounded">
                 <p>
-                  <strong>Nome:</strong> {fornecedor.nome}
+                  <strong>Nome:</strong> {contato.nome}
                 </p>
                 <p>
-                  <strong>Endereço:</strong> {fornecedor.endereco}
+                  <strong>Telefone:</strong> {contato.telefone}
                 </p>
                 <p>
-                  <strong>Telefone:</strong> {fornecedor.telefone}
+                  <strong>Email:</strong> {contato.email}
                 </p>
                 <p>
-                  <strong>Email:</strong> {fornecedor.email}
-                </p>
-                <p>
-                  <strong>CNPJ:</strong> {fornecedor.cnpj}
-                </p>
-                <p>
-                  <strong>CEP:</strong> {fornecedor.cep}
+                  <strong>Fornecedor:</strong>{" "}
+                  {getFornecedorNome(contato.fornecedorId)}
                 </p>
                 <div className="flex space-x-2 mt-2">
                   <button
-                    onClick={() => handleEdit(fornecedor)}
+                    onClick={() => handleEdit(contato)}
                     className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
                     Editar
                   </button>
                   <button
-                    onClick={() => handleDelete(fornecedor.id)}
+                    onClick={() => handleDelete(contato.id)}
                     className="p-2 bg-red-600 text-white rounded hover:bg-red-700"
                   >
                     Excluir
                   </button>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
     </div>
