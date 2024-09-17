@@ -11,6 +11,7 @@ import {
   faTimes,
   faUsers,
   faList,
+  faPhone,
 } from "@fortawesome/free-solid-svg-icons";
 
 const Sidebar = () => {
@@ -64,7 +65,7 @@ const Sidebar = () => {
                     to="/fornecedor"
                     className="flex items-center text-white hover:text-purple-400 transition duration-300"
                   >
-                    <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                    <FontAwesomeIcon icon={faPhone} className="mr-2" />
                     Fornecedores
                   </Link>
                 </li>
@@ -91,21 +92,25 @@ const Sidebar = () => {
                     to="/lista-cotacao"
                     className="flex items-center text-white hover:text-purple-400 transition duration-300"
                   >
-                    <FontAwesomeIcon icon={faList} className="mr-2" />
-                    Cotações de Compras
+                    <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
+                    Cotação de Compras
                   </Link>
                 </li>
               </>
             )}
-            <li className="mb-2">
-              <Link
-                to="/cotacao"
-                className="flex items-center text-white hover:text-purple-400 transition duration-300"
-              >
-                <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
-                Requisição de Compras
-              </Link>
-            </li>
+            {userType === "colaborador" && (
+              <>
+                <li className="mb-2">
+                  <Link
+                    to="/cotacao"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
+                    Requisição de Compras
+                  </Link>
+                </li>
+              </>
+            )}
             <li className="mb-2">
               <Link
                 to="/logout"

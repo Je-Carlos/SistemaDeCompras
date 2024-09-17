@@ -18,7 +18,7 @@ function Home() {
         <ul className="space-y-4">
           <li>
             <Link
-              to="/fazer-cotacao"
+              to="/cotacao"
               className="flex items-center justify-center p-4 bg-purple-600 text-white rounded hover:bg-purple-700 transition duration-300"
             >
               <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />

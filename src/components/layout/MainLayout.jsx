@@ -46,7 +46,6 @@ export default function MainLayout() {
                 <Route path="/contato" element={<Contatos />} />
                 <Route path="/colaborador" element={<Colaborador />} />
                 <Route path="/lista-cotacao" element={<ConsultaCotacao />} />
-                <Route path="/cotacao" element={<CadastroCotacao />} />
                 <Route path="/logout" element={<Logout />} />
               </>
             )}
