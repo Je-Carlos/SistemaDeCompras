@@ -1,19 +1,27 @@
-// Sidebar.jsx
-import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBars,
+  faHouse,
+  faUserPlus,
   faClipboardList,
-  faPhone,
   faShoppingCart,
+  faSignOutAlt,
+  faBars,
   faTimes,
-  faUser,
+  faUsers,
+  faList,
+  faPhone,
 } from "@fortawesome/free-solid-svg-icons";
-import { FaSignOutAlt } from "react-icons/fa";
 
-function Sidebar() {
+const Sidebar = () => {
+  const [userType, setUserType] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
+
+  useEffect(() => {
+    const userType = localStorage.getItem("userType");
+    setUserType(userType);
+  }, []);
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
@@ -33,32 +41,83 @@ function Sidebar() {
           <h2 className="text-xl font-semibold mb-4">Menu</h2>
           <ul>
             <li className="mb-2">
-              <Link to="/user" className="text-white">
-                <FontAwesomeIcon icon={faUser} className="mr-2" />
-                Usuários
+              <Link
+                to="/home"
+                className="flex items-center text-white hover:text-purple-400 transition duration-300"
+              >
+                <FontAwesomeIcon icon={faHouse} className="mr-2" />
+                Home
               </Link>
             </li>
+            {userType === "admin" && (
+              <>
+                <li className="mb-2">
+                  <Link
+                    to="/produto"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
+                    Produtos
+                  </Link>
+                </li>
+                <li className="mb-2">
+                  <Link
+                    to="/fornecedor"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faPhone} className="mr-2" />
+                    Fornecedores
+                  </Link>
+                </li>
+                <li className="mb-2">
+                  <Link
+                    to="/contato"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                    Contatos
+                  </Link>
+                </li>
+                <li className="mb-2">
+                  <Link
+                    to="/colaborador"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faUsers} className="mr-2" />
+                    Lista de Colaboradores
+                  </Link>
+                </li>
+                <li className="mb-2">
+                  <Link
+                    to="/lista-cotacao"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
+                    Cotação de Compras
+                  </Link>
+                </li>
+              </>
+            )}
+            {userType === "colaborador" && (
+              <>
+                <li className="mb-2">
+                  <Link
+                    to="/cotacao"
+                    className="flex items-center text-white hover:text-purple-400 transition duration-300"
+                  >
+                    <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
+                    Requisição de Compras
+                  </Link>
+                </li>
+              </>
+            )}
             <li className="mb-2">
-              <Link to="/cotacao" className="text-white">
-                <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
-                Fazer Cotação
-              </Link>
-            </li>
-            <li className="mb-2">
-              <Link to="/fornecedor" className="text-white">
-                <FontAwesomeIcon icon={faPhone} className="mr-2" />
-                Fornecedores
-              </Link>
-            </li>
-            <li className="mb-2">
-              <Link to="/fazer-cotacao" className="text-white">
-                <FontAwesomeIcon icon={faClipboardList} className="mr-2" />
-                Cotações
-              </Link>
-            </li>
-            <li className="mb-2">
-              <Link to="/login" className="text-white flex items-center">
-                <FaSignOutAlt className="mr-2" /> Logout
+              <Link
+                to="/logout"
+                className="flex items-center text-white hover:text-purple-400 transition duration-300"
+              >
+                <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" />
+                Logout
               </Link>
             </li>
           </ul>
@@ -66,6 +125,6 @@ function Sidebar() {
       )}
     </div>
   );
-}
+};
 
 export default Sidebar;

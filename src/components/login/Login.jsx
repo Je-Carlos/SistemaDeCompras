@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase/firebaseConfig";
+import { auth, db } from "../../firebase/firebaseConfig";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import "./login.css";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -15,15 +16,33 @@ export default function Login() {
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        username,
+        email,
         password
       );
-      console.log("Login bem-sucedido:", userCredential);
-      localStorage.setItem("isAuthenticated", "true");
-      navigate("/home");
+      const user = userCredential.user;
+      console.log("Login bem-sucedido:", user);
+
+      // Verificar o tipo de usuário no Firestore
+      const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        console.log("Dados do usuário:", userData);
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("userType", userData.tipo);
+        if (userData.tipo === "admin") {
+          navigate("/home");
+        } else {
+          navigate("/cotacao");
+        }
+      } else {
+        console.error("Usuário não encontrado no banco de dados.");
+        setError("Usuário não encontrado no banco de dados.");
+      }
     } catch (error) {
-      console.error("Erro durante o login:", error);
-      setError("Usuário ou senha inválidos");
+      console.error("Erro ao fazer login:", error);
+      setError("Erro ao fazer login: " + error.message);
     }
   };
 
@@ -43,8 +62,8 @@ export default function Login() {
           <input
             type="email"
             placeholder="Email"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
           <input
