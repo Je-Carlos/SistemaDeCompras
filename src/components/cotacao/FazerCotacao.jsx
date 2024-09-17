@@ -16,6 +16,7 @@ function FazerCotacao() {
   const { register, handleSubmit, setValue, reset } = useForm();
   const [cotacoes, setCotacoes] = useState([]);
   const [produtos, setProdutos] = useState([]);
+  const [categorias, setCategorias] = useState({});
   const [error, setError] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -52,6 +53,13 @@ function FazerCotacao() {
         ...doc.data(),
       }));
       setProdutos(produtosList);
+
+      // Criar um mapa de categorias
+      const categoriasMap = {};
+      produtosList.forEach((produto) => {
+        categoriasMap[produto.nome] = produto.categoria;
+      });
+      setCategorias(categoriasMap);
     } catch (error) {
       console.error("Erro ao buscar produtos: ", error);
     }
@@ -136,16 +144,27 @@ function FazerCotacao() {
     }
   };
 
-  const handleProdutoClick = (produto) => {
+  const handleProdutoClick = async (produto) => {
     setSelectedProduto(produto);
-    fetchProdutoCotacoes(produto.id);
+    try {
+      const q = query(
+        collection(db, "cotacoes"),
+        where("produto", "==", produto.produto)
+      );
+      const querySnapshot = await getDocs(q);
+      const cotacoesList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProdutoCotacoes(cotacoesList);
+    } catch (error) {
+      console.error("Erro ao buscar cotações do produto: ", error);
+    }
   };
-  {
-    /*TODO: ARRUMAR A EXIBICAO DA COTACAO*/
-  }
+
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-6xl">
         <h2 className="text-2xl font-semibold mb-6 text-center text-white">
           Fazer Compras
         </h2>
@@ -225,6 +244,9 @@ function FazerCotacao() {
                     Produto
                   </th>
                   <th className="py-2 px-4 border-b border-gray-600">
+                    Categoria
+                  </th>
+                  <th className="py-2 px-4 border-b border-gray-600">
                     Quantidade
                   </th>
                   <th className="py-2 px-4 border-b border-gray-600">
@@ -247,6 +269,10 @@ function FazerCotacao() {
                       {cotacao.produto}
                     </td>
                     <td className="py-2 px-4 border-b border-gray-600">
+                      {categorias[cotacao.produto] ||
+                        "Categoria não encontrada"}
+                    </td>
+                    <td className="py-2 px-4 border-b border-gray-600">
                       {cotacao.quantidade}
                     </td>
                     <td className="py-2 px-4 border-b border-gray-600">
@@ -262,6 +288,8 @@ function FazerCotacao() {
                       className={`py-2 px-4 border-b border-gray-600 ${
                         cotacao.status === "aberta"
                           ? "text-green-500"
+                          : cotacao.status === "em cotacao"
+                          ? "text-yellow-500"
                           : "text-red-500"
                       }`}
                     >
@@ -293,7 +321,7 @@ function FazerCotacao() {
             </table>
           </div>
         </div>
-        {selectedProduto && (
+        {selectedProduto && selectedProduto.cotacoes && (
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4 text-center">
               Cotações do Produto: {selectedProduto.produto}
@@ -312,13 +340,13 @@ function FazerCotacao() {
                   </tr>
                 </thead>
                 <tbody>
-                  {produtoCotacoes.map((cotacao) => (
-                    <tr key={cotacao.id} className="hover:bg-gray-600">
+                  {selectedProduto.cotacoes.map((cotacao, index) => (
+                    <tr key={index} className="hover:bg-gray-600">
                       <td className="py-2 px-4 border-b border-gray-600">
                         {cotacao.fornecedor}
                       </td>
                       <td className="py-2 px-4 border-b border-gray-600">
-                        {cotacao.preco}
+                        {cotacao.valor}
                       </td>
                       <td className="py-2 px-4 border-b border-gray-600">
                         {cotacao.data}

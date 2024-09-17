@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
 import { db } from "../../firebase/firebaseConfig";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 export default function CadastroProdutos() {
   const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
+  const [categoria, setCategoria] = useState("");
   const [produtos, setProdutos] = useState([]);
   const [showCadastro, setShowCadastro] = useState(false);
   const [error, setError] = useState("");
   const [sucesso, setSucesso] = useState("");
+  const [editandoProduto, setEditandoProduto] = useState(null);
 
   const fetchProdutos = async () => {
     try {
@@ -29,107 +37,130 @@ export default function CadastroProdutos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!nome || !categoria) {
+      setError("Todos os campos são obrigatórios");
+      return;
+    }
+
     try {
-      const novoProduto = {
-        nome,
-        descricao,
-      };
-
-      await addDoc(collection(db, "produtos"), novoProduto);
-
-      setSucesso("Produto cadastrado com sucesso!");
+      if (editandoProduto) {
+        // Atualizar produto existente
+        const produtoRef = doc(db, "produtos", editandoProduto.id);
+        await updateDoc(produtoRef, {
+          nome,
+          categoria,
+        });
+        setSucesso("Produto atualizado com sucesso!");
+      } else {
+        // Adicionar novo produto
+        await addDoc(collection(db, "produtos"), {
+          nome,
+          categoria,
+        });
+        setSucesso("Produto cadastrado com sucesso!");
+      }
       setError("");
       setNome("");
-      setDescricao("");
-      setShowCadastro(false);
+      setCategoria("");
+      setEditandoProduto(null);
       fetchProdutos();
     } catch (error) {
+      console.error("Erro ao cadastrar produto: ", error);
       setError("Erro ao cadastrar produto: " + error.message);
-      setSucesso("");
+    }
+  };
+
+  const handleEdit = (produto) => {
+    setNome(produto.nome);
+    setCategoria(produto.categoria);
+    setEditandoProduto(produto);
+  };
+
+  const handleDelete = async (produtoId) => {
+    try {
+      await deleteDoc(doc(db, "produtos", produtoId));
+      setSucesso("Produto removido com sucesso!");
+      fetchProdutos();
+    } catch (error) {
+      console.error("Erro ao remover produto: ", error);
+      setError("Erro ao remover produto: " + error.message);
     }
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto bg-gray-800 text-white shadow-md rounded-lg">
-      {showCadastro ? (
-        <div>
-          <h1 className="text-2xl font-semibold mb-4 text-center text-white">
-            Cadastro de Produtos
-          </h1>
-          {error && <p className="text-red-500 text-center">{error}</p>}
-          {sucesso && <p className="text-green-500 text-center">{sucesso}</p>}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                className="block text-sm font-medium text-gray-300"
-                htmlFor="nome"
-              >
-                Nome
-              </label>
-              <input
-                className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="nome"
-                type="text"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label
-                className="block text-sm font-medium text-gray-300"
-                htmlFor="descricao"
-              >
-                Descrição
-              </label>
-              <textarea
-                className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
-                id="descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-            >
-              Cadastrar Produto
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCadastro(false)}
-              className="w-full p-2 mt-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Voltar
-            </button>
-          </form>
-        </div>
-      ) : (
-        <div>
-          <h1 className="text-2xl font-semibold mb-4 text-center text-white">
-            Lista de Produtos
-          </h1>
-          <button
-            onClick={() => setShowCadastro(true)}
-            className="mb-4 p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+    <div className="p-4 max-w-md mx-auto bg-gray-800 text-white shadow-md rounded-lg">
+      <h2 className="text-lg font-bold mb-4 text-white">
+        Cadastro de Produtos
+      </h2>
+      {error && <p className="text-red-500">{error}</p>}
+      {sucesso && <p className="text-green-500">{sucesso}</p>}
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label
+            htmlFor="nome"
+            className="block text-sm font-medium text-gray-300"
           >
-            Cadastrar Produto
-          </button>
-          <ul>
-            {produtos.map((produto) => (
-              <li key={produto.id} className="bg-gray-700 p-4 mb-2 rounded">
-                <p>
-                  <strong>Nome:</strong> {produto.nome}
-                </p>
-                <p>
-                  <strong>Descrição:</strong> {produto.descricao}
-                </p>
-              </li>
-            ))}
-          </ul>
+            Nome
+          </label>
+          <input
+            id="nome"
+            type="text"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+          />
         </div>
-      )}
+        <div className="mb-4">
+          <label
+            htmlFor="categoria"
+            className="block text-sm font-medium text-gray-300"
+          >
+            Categoria
+          </label>
+          <input
+            id="categoria"
+            type="text"
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded"
+          />
+        </div>
+        <button
+          type="submit"
+          className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
+          {editandoProduto ? "Atualizar Produto" : "Cadastrar Produto"}
+        </button>
+      </form>
+      <div className="mt-4">
+        <h3 className="text-lg font-bold mb-2 text-white">
+          Produtos Cadastrados
+        </h3>
+        <ul>
+          {produtos.map((produto) => (
+            <li key={produto.id} className="bg-gray-700 p-2 mb-2 rounded">
+              <p>
+                <strong>Nome:</strong> {produto.nome}
+              </p>
+              <p>
+                <strong>Categoria:</strong> {produto.categoria}
+              </p>
+              <button
+                onClick={() => handleEdit(produto)}
+                className="mr-2 p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleDelete(produto.id)}
+                className="p-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Remover
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

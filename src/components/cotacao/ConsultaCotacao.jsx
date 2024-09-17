@@ -6,14 +6,13 @@ import {
   updateDoc,
   doc,
   arrayUnion,
+  getDoc,
 } from "firebase/firestore";
+import { format, isValid } from "date-fns";
 
 export default function ConsultaCotacao() {
-  {
-    /*TODO: ARRUMAR AS COTAÇÕES*/
-  }
   const [cotacoes, setCotacoes] = useState([]);
-  const [fornecedores, setFornecedores] = useState([]);
+  const [fornecedores, setFornecedores] = useState([]); // Definindo a variável fornecedores
   const [carregando, setCarregando] = useState(false);
   const [isCotacaoVisible, setIsCotacaoVisible] = useState(false);
   const [selectedCotacao, setSelectedCotacao] = useState(null);
@@ -23,7 +22,6 @@ export default function ConsultaCotacao() {
     fornecedor: "",
   });
   const [erro, setErro] = useState("");
-  const [sucesso, setSucesso] = useState("");
   const [isCotacoesVisible, setIsCotacoesVisible] = useState({});
 
   useEffect(() => {
@@ -52,7 +50,7 @@ export default function ConsultaCotacao() {
         }));
         setFornecedores(fornecedoresList);
       } catch (error) {
-        console.error("Erro ao buscar fornecedores: ", error);
+        console.error("Erro ao buscar fornecedores:", error);
       }
     };
 
@@ -60,7 +58,49 @@ export default function ConsultaCotacao() {
     fetchFornecedores();
   }, []);
 
-  const handleCotacaoSubmit = async (e) => {
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "aberta":
+        return "text-green-500";
+      case "em cotacao":
+        return "text-yellow-500";
+      case "fechada":
+        return "text-red-500";
+      default:
+        return "";
+    }
+  };
+
+  const handleAddCotacao = async (cotacaoId, novaCotacao) => {
+    try {
+      const cotacaoRef = doc(db, "cotacoes", cotacaoId);
+      const cotacaoDoc = await getDoc(cotacaoRef);
+      const cotacaoData = cotacaoDoc.data();
+
+      const updatedCotacoes = [...(cotacaoData.cotacoes || []), novaCotacao];
+      let status = "em cotacao";
+      if (updatedCotacoes.length >= 3) {
+        status = "fechada";
+      }
+
+      await updateDoc(cotacaoRef, {
+        cotacoes: arrayUnion(novaCotacao),
+        status: status,
+      });
+
+      setCotacoes((prevCotacoes) =>
+        prevCotacoes.map((cot) =>
+          cot.id === cotacaoId
+            ? { ...cot, cotacoes: updatedCotacoes, status }
+            : cot
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao adicionar cotação: ", error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!cotacao.valor || !cotacao.data || !cotacao.fornecedor) {
       setErro("Todos os campos são obrigatórios");
@@ -83,28 +123,37 @@ export default function ConsultaCotacao() {
       const cotacaoRef = doc(db, "cotacoes", selectedCotacao.id);
       await updateDoc(cotacaoRef, {
         cotacoes: arrayUnion(novaCotacao),
-        status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "aberta",
+        status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "em cotacao",
       });
 
-      setSucesso("Cotação registrada com sucesso!");
-      setErro("");
-      setIsCotacaoVisible(false);
-      setCotacao({ valor: "", data: "", fornecedor: "" });
-
       setCotacoes((prevCotacoes) =>
-        prevCotacoes.map((c) =>
-          c.id === selectedCotacao.id
+        prevCotacoes.map((cot) =>
+          cot.id === selectedCotacao.id
             ? {
-                ...c,
-                cotacoes: [...produtoCotacoes, novaCotacao],
-                status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "aberta",
+                ...cot,
+                cotacoes: [...(cot.cotacoes || []), novaCotacao],
+                status:
+                  produtoCotacoes.length + 1 >= 3 ? "fechada" : "em cotacao",
               }
-            : c
+            : cot
         )
       );
+
+      setSelectedCotacao((prevSelectedCotacao) => ({
+        ...prevSelectedCotacao,
+        cotacoes: [...(prevSelectedCotacao.cotacoes || []), novaCotacao],
+        status: produtoCotacoes.length + 1 >= 3 ? "fechada" : "em cotacao",
+      }));
+
+      setCotacao({
+        valor: "",
+        data: "",
+        fornecedor: "",
+      });
+      setErro("");
     } catch (error) {
-      console.error("Erro ao registrar a cotação:", error);
-      setErro("Erro ao registrar a cotação: " + error.message);
+      console.error("Erro ao adicionar cotação: ", error);
+      setErro("Erro ao adicionar cotação");
     }
   };
 
@@ -132,58 +181,54 @@ export default function ConsultaCotacao() {
                 <strong>Produto:</strong> {cotacao.produto}
               </p>
               <p>
-                <strong>Status:</strong>
-                <span
-                  className={
-                    cotacao.status === "aberta"
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }
-                >
+                <strong>Quantidade:</strong> {cotacao.quantidade}
+              </p>
+              <p>
+                <strong>Email:</strong> {cotacao.userEmail}
+              </p>
+              <p>
+                <strong>Observação:</strong> {cotacao.observacao}
+              </p>
+              <p>
+                <strong>Status:</strong>{" "}
+                <span className={getStatusClass(cotacao.status)}>
                   {cotacao.status}
                 </span>
               </p>
-              {isCotacoesVisible[cotacao.id] && (
-                <>
-                  <p>
-                    <strong>Categoria:</strong> {cotacao.categoria}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {cotacao.email}
-                  </p>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedCotacao(cotacao);
-                      setIsCotacaoVisible(true);
-                    }}
-                    className={`mt-2 p-2 rounded ${
-                      cotacao.status === "fechada"
-                        ? "bg-gray-500 cursor-not-allowed"
-                        : "bg-purple-600 hover:bg-purple-700 text-white"
-                    }`}
-                    disabled={cotacao.status === "fechada"}
-                  >
-                    Fazer Cotação
-                  </button>
-                  {cotacao.cotacoes && (
-                    <ul className="mt-2">
-                      {cotacao.cotacoes.map((c, i) => (
-                        <li key={i} className="bg-gray-600 p-2 mb-2 rounded">
-                          <p>
-                            <strong>Valor:</strong> {c.valor}
-                          </p>
-                          <p>
-                            <strong>Data:</strong> {c.data}
-                          </p>
-                          <p>
-                            <strong>Fornecedor:</strong> {c.fornecedor}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCotacao(cotacao);
+                  setIsCotacaoVisible(true);
+                }}
+                className={`mt-2 p-2 rounded ${
+                  cotacao.status === "fechada"
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-purple-600 hover:bg-purple-700 text-white"
+                }`}
+                disabled={cotacao.status === "fechada"}
+              >
+                Fazer Cotação
+              </button>
+              {isCotacoesVisible[cotacao.id] && cotacao.cotacoes && (
+                <ul className="mt-2">
+                  {cotacao.cotacoes.map((c, i) => (
+                    <li key={i} className="bg-gray-600 p-2 mb-2 rounded">
+                      <p>
+                        <strong>Valor:</strong> {c.valor}
+                      </p>
+                      <p>
+                        <strong>Data:</strong>{" "}
+                        {isValid(new Date(c.data))
+                          ? format(new Date(c.data), "dd/MM/yyyy")
+                          : "Data inválida"}
+                      </p>
+                      <p>
+                        <strong>Fornecedor:</strong> {c.fornecedor}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </li>
           ))}
@@ -193,7 +238,7 @@ export default function ConsultaCotacao() {
         <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center">
           <div className="bg-gray-800 p-4 rounded-lg">
             <h3 className="text-lg font-bold mb-4 text-white">Fazer Cotação</h3>
-            <form onSubmit={handleCotacaoSubmit}>
+            <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label
                   htmlFor="valor"
