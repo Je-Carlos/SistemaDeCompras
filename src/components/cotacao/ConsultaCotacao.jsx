@@ -23,6 +23,7 @@ export default function ConsultaCotacao() {
   });
   const [erro, setErro] = useState("");
   const [isCotacoesVisible, setIsCotacoesVisible] = useState({});
+  const [cotacaoCount, setCotacaoCount] = useState(0);
 
   useEffect(() => {
     const fetchAllCotacoes = async () => {
@@ -151,6 +152,13 @@ export default function ConsultaCotacao() {
         fornecedor: "",
       });
       setErro("");
+      setCotacaoCount((prevCount) => {
+        const newCount = prevCount + 1;
+        if (newCount >= 3) {
+          setIsCotacaoVisible(false);
+        }
+        return newCount;
+      });
     } catch (error) {
       console.error("Erro ao adicionar cotação: ", error);
       setErro("Erro ao adicionar cotação");
