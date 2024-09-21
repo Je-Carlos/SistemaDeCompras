@@ -10,7 +10,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 function Home() {
-  // TODO: ARRUMAR LINKS
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
       <div className="p-8 bg-gray-800 text-white rounded-lg shadow-md w-full max-w-md">

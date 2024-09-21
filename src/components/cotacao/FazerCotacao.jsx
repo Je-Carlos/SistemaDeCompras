@@ -11,8 +11,9 @@ import {
   where,
 } from "firebase/firestore";
 import { useForm } from "react-hook-form";
+import { Parser } from "@json2csv/plainjs";
 
-function FazerCotacao() {
+export default function FazerCotacao() {
   const { register, handleSubmit, setValue, reset } = useForm();
   const [cotacoes, setCotacoes] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -23,6 +24,9 @@ function FazerCotacao() {
   const [currentCotacaoId, setCurrentCotacaoId] = useState(null);
   const [selectedProduto, setSelectedProduto] = useState(null);
   const [produtoCotacoes, setProdutoCotacoes] = useState([]);
+  const [filterDate, setFilterDate] = useState("");
+  const [filterName, setFilterName] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchCotacoes = async () => {
     try {
@@ -44,7 +48,13 @@ function FazerCotacao() {
       console.error("Erro ao buscar cotações: ", error);
     }
   };
-
+  const filteredCotacoes = cotacoes.filter((cotacao) => {
+    const matchesName =
+      filterName === "" ||
+      cotacao.produto.toLowerCase().includes(filterName.toLowerCase());
+    const matchesDate = filterDate === "" || cotacao.data === filterDate;
+    return matchesName && matchesDate;
+  });
   const fetchProdutos = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "produtos"));
@@ -53,8 +63,6 @@ function FazerCotacao() {
         ...doc.data(),
       }));
       setProdutos(produtosList);
-
-      // Criar um mapa de categorias
       const categoriasMap = {};
       produtosList.forEach((produto) => {
         categoriasMap[produto.nome] = produto.categoria;
@@ -64,7 +72,42 @@ function FazerCotacao() {
       console.error("Erro ao buscar produtos: ", error);
     }
   };
+  const exportToCSV = () => {
+    const closedCotacoes = cotacoes.filter(
+      (cotacao) => cotacao.status === "fechada"
+    );
+    if (closedCotacoes.length === 0) {
+      setError("Nenhuma cotação fechada para exportar.");
+      return;
+    }
 
+    const fields = [
+      "produto",
+      "categoria",
+      "quantidade",
+      "observacao",
+      "data",
+      "userEmail",
+      "status",
+    ];
+    const opts = { fields };
+    try {
+      const parser = new Parser(opts);
+      const csv = parser.parse(closedCotacoes);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "cotacoes_fechadas.csv");
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao exportar cotações.");
+    }
+  };
   const fetchProdutoCotacoes = async (produtoId) => {
     try {
       const q = query(
@@ -233,6 +276,52 @@ function FazerCotacao() {
           </div>
         </form>
         <div className="mt-8">
+          <button
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            {showFilters ? "Ocultar Filtros" : "Mostrar Filtros"}
+          </button>
+          {showFilters && (
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-4 text-center">
+                Filtrar Cotações
+              </h3>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-300 text-sm font-bold mb-2"
+                  htmlFor="filterName"
+                >
+                  Nome do Produto
+                </label>
+                <input
+                  className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+                  id="filterName"
+                  type="text"
+                  placeholder="Nome do Produto"
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-300 text-sm font-bold mb-2"
+                  htmlFor="filterDate"
+                >
+                  Data
+                </label>
+                <input
+                  className="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+                  id="filterDate"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4 text-center">
             Cotações de Compras
           </h3>
@@ -259,7 +348,7 @@ function FazerCotacao() {
                 </tr>
               </thead>
               <tbody>
-                {cotacoes.map((cotacao) => (
+                {filteredCotacoes.map((cotacao) => (
                   <tr
                     key={cotacao.id}
                     className="hover:bg-gray-600"
@@ -321,6 +410,14 @@ function FazerCotacao() {
             </table>
           </div>
         </div>
+        <div className="mt-8">
+          <button
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+            onClick={exportToCSV}
+          >
+            Exportar Cotações Fechadas para CSV
+          </button>
+        </div>
         {selectedProduto && selectedProduto.cotacoes && (
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4 text-center">
@@ -362,5 +459,3 @@ function FazerCotacao() {
     </div>
   );
 }
-
-export default FazerCotacao;
